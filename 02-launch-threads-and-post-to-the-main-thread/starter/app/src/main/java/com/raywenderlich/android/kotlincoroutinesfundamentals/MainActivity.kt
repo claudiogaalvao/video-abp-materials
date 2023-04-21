@@ -73,17 +73,23 @@ class MainActivity : AppCompatActivity() {
       .setRequiredNetworkType(NetworkType.NOT_ROAMING)
       .build()
 
+    val clearFilesWorker = OneTimeWorkRequestBuilder<FileClearWorker>()
+      .build()
+
     val downloadRequest = OneTimeWorkRequestBuilder<DownloadWorker>()
       .setConstraints(constraints)
       .build()
 
     val workManager = WorkManager.getInstance(this)
-    workManager.enqueue(downloadRequest)
+    workManager.beginWith(clearFilesWorker).then(downloadRequest).enqueue()
 
     workManager.getWorkInfoByIdLiveData(downloadRequest.id).observe(this) { info ->
       if (info.state.isFinished) {
-        val imageFile = File(externalMediaDirs.first(), "nature.jpg")
-        displayImage(imageFile.absolutePath)
+        val imagePath = info.outputData.getString("image_path")
+
+        if (!imagePath.isNullOrEmpty()) {
+          displayImage(imagePath)
+        }
       }
     }
   }
